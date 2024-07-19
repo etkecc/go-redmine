@@ -1,6 +1,6 @@
 module gitlab.com/etke.cc/go/redmine
 
-go 1.22.5
+go 1.21
 
 require (
 	github.com/nixys/nxs-go-redmine/v5 v5.1.0
