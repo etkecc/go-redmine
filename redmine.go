@@ -2,6 +2,7 @@ package redmine
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -27,12 +28,22 @@ type API interface {
 	IssueCreate(req redmine.IssueCreate) (redmine.IssueObject, redmine.StatusCode, error)
 	IssueUpdate(id int64, req redmine.IssueUpdate) (redmine.StatusCode, error)
 	IssueSingleGet(id int64, req redmine.IssueSingleGetRequest) (redmine.IssueObject, redmine.StatusCode, error)
+	AttachmentUpload(filePath string) (redmine.AttachmentUploadObject, redmine.StatusCode, error)
+	AttachmentUploadStream(f io.Reader, fileName string) (redmine.AttachmentUploadObject, redmine.StatusCode, error)
 }
 
 // Redmine is a Redmine client
 type Redmine struct {
 	wg  sync.WaitGroup
 	cfg *Config
+}
+
+// UploadRequest is a request to upload a file
+// you can use either only Path to specify the file from the filesystem
+// OR Stream to specify the file from a stream. In this case, Path is used as a filename
+type UploadRequest struct {
+	Path   string
+	Stream io.Reader
 }
 
 // New creates a new Redmine client
@@ -70,8 +81,33 @@ func (r *Redmine) Configure(options ...Option) {
 	r.cfg.apply(options...)
 }
 
+// uploadAttachments uploads attachments to Redmine, if any
+func (r *Redmine) uploadAttachments(files ...*UploadRequest) *[]redmine.AttachmentUploadObject {
+	var uploads *[]redmine.AttachmentUploadObject
+	for _, req := range files {
+		if req == nil {
+			r.cfg.Log.Warn().Msg("nil upload request")
+		}
+		upload, err := retryResult(r.cfg.Log, func() (redmine.AttachmentUploadObject, redmine.StatusCode, error) {
+			if req.Stream == nil {
+				return r.cfg.api.AttachmentUpload(req.Path)
+			}
+			return r.cfg.api.AttachmentUploadStream(req.Stream, req.Path)
+		})
+		if err != nil {
+			r.cfg.Log.Error().Err(err).Msg("failed to upload attachment")
+			continue
+		}
+		if uploads == nil {
+			uploads = &[]redmine.AttachmentUploadObject{}
+		}
+		*uploads = append(*uploads, upload)
+	}
+	return uploads
+}
+
 // NewIssue creates a new issue in Redmine
-func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string) (int64, error) {
+func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string, files ...*UploadRequest) (int64, error) {
 	log := r.cfg.Log.With().Str(senderMedium, senderAddress).Logger()
 	if !r.Enabled() {
 		log.Debug().Msg("redmine is disabled, ignoring NewIssue() call")
@@ -97,6 +133,7 @@ func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string) (i
 				StatusID:    redmine.Int64Ptr(r.cfg.WaitingForOperatorStatusID),
 				Subject:     subject,
 				Description: redmine.StringPtr(text),
+				Uploads:     r.uploadAttachments(files...),
 			},
 		})
 	})
@@ -109,7 +146,7 @@ func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string) (i
 }
 
 // UpdateIssue updates the status using one of the constants and notes of an issue
-func (r *Redmine) UpdateIssue(issueID int64, status Status, text string) error {
+func (r *Redmine) UpdateIssue(issueID int64, status Status, text string, files ...*UploadRequest) error {
 	log := r.cfg.Log.With().Int64("issue_id", issueID).Logger()
 	if !r.Enabled() {
 		log.Debug().Msg("redmine is disabled, ignoring UpdateIssue() call")
@@ -142,6 +179,7 @@ func (r *Redmine) UpdateIssue(issueID int64, status Status, text string) error {
 				ProjectID: redmine.Int64Ptr(r.cfg.ProjectID),
 				StatusID:  redmine.Int64Ptr(statusID),
 				Notes:     redmine.StringPtr(text),
+				Uploads:   r.uploadAttachments(files...),
 			},
 		})
 	})
