@@ -52,10 +52,7 @@ func (cfg *Config) Enabled() bool {
 	return cfg.Host != "" &&
 		cfg.APIKey != "" &&
 		(cfg.ProjectIdentifier != "" || cfg.ProjectID != 0) &&
-		cfg.TrackerID != 0 &&
-		cfg.WaitingForOperatorStatusID != 0 &&
-		cfg.WaitingForCustomerStatusID != 0 &&
-		cfg.DoneStatusID != 0
+		cfg.TrackerID != 0
 }
 
 // withAPI sets the API interface
