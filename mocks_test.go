@@ -2,6 +2,7 @@ package redmine
 
 import (
 	"io"
+	"net/url"
 
 	redmine "github.com/nixys/nxs-go-redmine/v5"
 )
@@ -39,4 +40,9 @@ func (m *mockAPI) IssueUpdate(_ int64, _ redmine.IssueUpdate) (redmine.StatusCod
 
 func (m *mockAPI) IssueSingleGet(id int64, _ redmine.IssueSingleGetRequest) (redmine.IssueObject, redmine.StatusCode, error) {
 	return redmine.IssueObject{ID: id, Status: redmine.IssueStatusObject{ID: 3}}, 200, nil
+}
+
+//nolint:gocritic // This is a mock
+func (m *mockAPI) Del(_, _ any, _ url.URL, _ redmine.StatusCode) (redmine.StatusCode, error) {
+	return 204, nil
 }

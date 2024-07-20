@@ -3,7 +3,10 @@ package redmine
 import (
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -30,6 +33,7 @@ type API interface {
 	IssueSingleGet(id int64, req redmine.IssueSingleGetRequest) (redmine.IssueObject, redmine.StatusCode, error)
 	AttachmentUpload(filePath string) (redmine.AttachmentUploadObject, redmine.StatusCode, error)
 	AttachmentUploadStream(f io.Reader, fileName string) (redmine.AttachmentUploadObject, redmine.StatusCode, error)
+	Del(in, out any, uri url.URL, statusExpected redmine.StatusCode) (redmine.StatusCode, error)
 }
 
 // Redmine is a Redmine client
@@ -288,6 +292,30 @@ func (r *Redmine) GetNotes(issueID int64) ([]*redmine.IssueJournalObject, error)
 	}
 	log.Debug().Int("journals", len(eligibleJournals)).Msg("journals found")
 	return eligibleJournals, nil
+}
+
+// DeleteAttachment deletes an attachment by its ID
+func (r *Redmine) DeleteAttachment(attachmentID int64) error {
+	log := r.cfg.Log.With().Int64("attachment_id", attachmentID).Logger()
+	if !r.Enabled() {
+		log.Debug().Msg("redmine is disabled, ignoring DeleteAttachment() call")
+		return nil
+	}
+	if attachmentID == 0 {
+		return nil
+	}
+
+	r.wg.Add(1)
+	defer r.wg.Done()
+
+	err := retry(&log, func() (redmine.StatusCode, error) {
+		return r.cfg.api.Del(nil, nil, url.URL{Path: "/attachments/" + strconv.FormatInt(attachmentID, 10) + ".json"}, http.StatusNoContent)
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to delete attachment")
+		return err
+	}
+	return nil
 }
 
 // Shutdown waits for all goroutines to finish
