@@ -145,6 +145,31 @@ func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string, fi
 	return issue.ID, nil
 }
 
+// GetIssue returns an issue by its ID
+func (r *Redmine) GetIssue(issueID int64, includes ...redmine.IssueInclude) (redmine.IssueObject, error) {
+	log := r.cfg.Log.With().Int64("issue_id", issueID).Logger()
+	var issue redmine.IssueObject
+	if !r.Enabled() {
+		log.Debug().Msg("redmine is disabled, ignoring GetIssue() call")
+		return issue, nil
+	}
+	if issueID == 0 {
+		return issue, nil
+	}
+
+	r.wg.Add(1)
+	defer r.wg.Done()
+
+	issue, err := retryResult(&log, func() (redmine.IssueObject, redmine.StatusCode, error) {
+		return r.cfg.api.IssueSingleGet(issueID, redmine.IssueSingleGetRequest{Includes: includes})
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get issue")
+		return issue, err
+	}
+	return issue, nil
+}
+
 // UpdateIssue updates the status using one of the constants and notes of an issue
 func (r *Redmine) UpdateIssue(issueID int64, status Status, text string, files ...*UploadRequest) error {
 	log := r.cfg.Log.With().Int64("issue_id", issueID).Logger()
@@ -192,25 +217,9 @@ func (r *Redmine) UpdateIssue(issueID int64, status Status, text string, files .
 
 // GetStatus returns the status of an issue
 func (r *Redmine) GetStatus(issueID int64) (redmine.IssueStatusObject, error) {
-	log := r.cfg.Log.With().Int64("issue_id", issueID).Logger()
-	var status redmine.IssueStatusObject
-	if !r.Enabled() {
-		log.Debug().Msg("redmine is disabled, ignoring GetStatus() call")
-		return status, nil
-	}
-	if issueID == 0 {
-		return status, nil
-	}
-
-	r.wg.Add(1)
-	defer r.wg.Done()
-
-	issue, err := retryResult(&log, func() (redmine.IssueObject, redmine.StatusCode, error) {
-		return r.cfg.api.IssueSingleGet(issueID, redmine.IssueSingleGetRequest{})
-	})
+	issue, err := r.GetIssue(issueID)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get issue")
-		return status, err
+		return redmine.IssueStatusObject{}, err
 	}
 	return issue.Status, nil
 }
