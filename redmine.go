@@ -166,8 +166,8 @@ func (r *Redmine) UpdateIssue(issueID int64, status Status, text string, files .
 	case Done:
 		statusID = r.cfg.DoneStatusID
 	default:
-		log.Error().Int("status", int(status)).Msg("unknown status")
-		return fmt.Errorf("unknown status: %d", status)
+		statusID = int64(status)
+		log.Warn().Int("status", int(status)).Msg("unknown status")
 	}
 
 	r.wg.Add(1)
