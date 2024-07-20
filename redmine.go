@@ -190,7 +190,31 @@ func (r *Redmine) UpdateIssue(issueID int64, status Status, text string, files .
 	return nil
 }
 
-// IsClosed returns true if the issue is closed
+// StatusIs returns true if the issue has the specified status ID
+func (r *Redmine) StatusIs(issueID, statusID int64) (bool, error) {
+	log := r.cfg.Log.With().Int64("issue_id", issueID).Logger()
+	if !r.Enabled() {
+		log.Debug().Msg("redmine is disabled, ignoring StatusIs() call")
+		return false, nil
+	}
+	if issueID == 0 {
+		return false, nil
+	}
+
+	r.wg.Add(1)
+	defer r.wg.Done()
+
+	issue, err := retryResult(&log, func() (redmine.IssueObject, redmine.StatusCode, error) {
+		return r.cfg.api.IssueSingleGet(issueID, redmine.IssueSingleGetRequest{})
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get issue")
+		return false, err
+	}
+	return issue.Status.ID == statusID, nil
+}
+
+// IsClosed returns true if the issue is closed or has "Done" status
 func (r *Redmine) IsClosed(issueID int64) (bool, error) {
 	log := r.cfg.Log.With().Int64("issue_id", issueID).Logger()
 	if !r.Enabled() {
