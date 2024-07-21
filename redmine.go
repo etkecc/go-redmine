@@ -31,6 +31,7 @@ type API interface {
 	IssueCreate(req redmine.IssueCreate) (redmine.IssueObject, redmine.StatusCode, error)
 	IssueUpdate(id int64, req redmine.IssueUpdate) (redmine.StatusCode, error)
 	IssueSingleGet(id int64, req redmine.IssueSingleGetRequest) (redmine.IssueObject, redmine.StatusCode, error)
+	IssueDelete(id int64) (redmine.StatusCode, error)
 	AttachmentUpload(filePath string) (redmine.AttachmentUploadObject, redmine.StatusCode, error)
 	AttachmentUploadStream(f io.Reader, fileName string) (redmine.AttachmentUploadObject, redmine.StatusCode, error)
 	Del(in, out any, uri url.URL, statusExpected redmine.StatusCode) (redmine.StatusCode, error)
@@ -214,6 +215,30 @@ func (r *Redmine) UpdateIssue(issueID int64, status Status, text string, files .
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to update issue")
+		return err
+	}
+	return nil
+}
+
+// DeleteIssue deletes an issue by its ID
+func (r *Redmine) DeleteIssue(issueID int64) error {
+	log := r.cfg.Log.With().Int64("issue_id", issueID).Logger()
+	if !r.Enabled() {
+		log.Debug().Msg("redmine is disabled, ignoring DeleteIssue() call")
+		return nil
+	}
+	if issueID == 0 {
+		return nil
+	}
+
+	r.wg.Add(1)
+	defer r.wg.Done()
+
+	err := retry(&log, func() (redmine.StatusCode, error) {
+		return r.cfg.api.IssueDelete(issueID)
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to delete issue")
 		return err
 	}
 	return nil

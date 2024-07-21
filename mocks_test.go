@@ -42,6 +42,10 @@ func (m *mockAPI) IssueSingleGet(id int64, _ redmine.IssueSingleGetRequest) (red
 	return redmine.IssueObject{ID: id, Status: redmine.IssueStatusObject{ID: 3}}, 200, nil
 }
 
+func (m *mockAPI) IssueDelete(_ int64) (redmine.StatusCode, error) {
+	return 204, nil
+}
+
 //nolint:gocritic // This is a mock
 func (m *mockAPI) Del(_, _ any, _ url.URL, _ redmine.StatusCode) (redmine.StatusCode, error) {
 	return 204, nil
