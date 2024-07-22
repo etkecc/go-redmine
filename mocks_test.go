@@ -47,6 +47,11 @@ func (m *mockAPI) IssueDelete(_ int64) (redmine.StatusCode, error) {
 }
 
 //nolint:gocritic // This is a mock
+func (m *mockAPI) Post(_, _ any, _ url.URL, _ redmine.StatusCode) (redmine.StatusCode, error) {
+	return 201, nil
+}
+
+//nolint:gocritic // This is a mock
 func (m *mockAPI) Del(_, _ any, _ url.URL, _ redmine.StatusCode) (redmine.StatusCode, error) {
 	return 204, nil
 }
