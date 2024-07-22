@@ -82,6 +82,7 @@ func (r *Redmine) Enabled() bool {
 	return r.cfg.Enabled()
 }
 
+// Configure applies the new configuration options
 func (r *Redmine) Configure(options ...Option) {
 	r.cfg.apply(options...)
 }
