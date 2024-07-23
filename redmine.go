@@ -111,6 +111,9 @@ func (r *Redmine) uploadAttachments(files ...*UploadRequest) *[]redmine.Attachme
 			if req.Stream == nil {
 				return r.cfg.api.AttachmentUpload(req.Path)
 			}
+			if streamCloser, ok := req.Stream.(io.Closer); ok {
+				defer streamCloser.Close()
+			}
 			return r.cfg.api.AttachmentUploadStream(req.Stream, req.Path)
 		})
 		if err != nil {
