@@ -75,7 +75,8 @@ func TestUpdateIssue(t *testing.T) {
 	)
 	r.cfg.api = &mockAPI{}
 
-	err := r.UpdateIssue(123, Done, "Closing issue.")
+	statusID := r.StatusToID(Done)
+	err := r.UpdateIssue(123, statusID, "Closing issue.")
 	if err != nil {
 		t.Fatalf("Expected no error, but got %v", err)
 	}
