@@ -48,7 +48,6 @@ func (r *Redmine) uploadAttachments(files ...*UploadRequest) *[]redmine.Attachme
 	var uploads *[]redmine.AttachmentUploadObject
 	for _, req := range files {
 		if req == nil {
-			r.cfg.Log.Warn().Msg("nil upload request")
 			continue
 		}
 		upload, err := RetryResult(r.cfg.Log, func() (redmine.AttachmentUploadObject, redmine.StatusCode, error) {
