@@ -47,7 +47,7 @@ func (r *Redmine) GetIssue(issueID int64, includes ...redmine.IssueInclude) (red
 }
 
 // NewIssue creates a new issue in Redmine
-func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string, files ...*UploadRequest) (int64, error) {
+func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string, parentIssueID int64, files ...*UploadRequest) (int64, error) {
 	log := r.cfg.Log.With().Str(senderMedium, senderAddress).Logger()
 	if !r.Enabled() {
 		log.Debug().Msg("redmine is disabled, ignoring NewIssue() call")
@@ -65,15 +65,21 @@ func (r *Redmine) NewIssue(subject, senderMedium, senderAddress, text string, fi
 	description.WriteString(fmt.Sprintf("Sender: `%s` (%s)\n\n", senderAddress, senderMedium))
 	description.WriteString(text)
 	text = description.String()
+
+	var parent *int64
+	if parentIssueID != 0 {
+		parent = &parentIssueID
+	}
 	issue, err := RetryResult(&log, func() (redmine.IssueObject, redmine.StatusCode, error) {
 		return r.cfg.api.IssueCreate(redmine.IssueCreate{
 			Issue: redmine.IssueCreateObject{
-				ProjectID:   r.cfg.ProjectID,
-				TrackerID:   redmine.Int64Ptr(r.cfg.TrackerID),
-				StatusID:    redmine.Int64Ptr(r.cfg.WaitingForOperatorStatusID),
-				Subject:     subject,
-				Description: redmine.StringPtr(text),
-				Uploads:     r.uploadAttachments(files...),
+				ProjectID:     r.cfg.ProjectID,
+				TrackerID:     redmine.Int64Ptr(r.cfg.TrackerID),
+				StatusID:      redmine.Int64Ptr(r.cfg.WaitingForOperatorStatusID),
+				ParentIssueID: parent,
+				Subject:       subject,
+				Description:   redmine.StringPtr(text),
+				Uploads:       r.uploadAttachments(files...),
 			},
 		})
 	})
