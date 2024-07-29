@@ -51,7 +51,7 @@ func TestNewIssue(t *testing.T) {
 	)
 	r.cfg.api = &mockAPI{}
 
-	issueID, err := r.NewIssue("Test Issue", "email", "test@example.com", "This is a test issue.", 0)
+	issueID, err := r.NewIssue("Test Issue", "email", "test@example.com", "This is a test issue.")
 	if err != nil {
 		t.Fatalf("Expected no error, but got %v", err)
 	}
