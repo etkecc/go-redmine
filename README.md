@@ -18,7 +18,7 @@ Its main focus is on using redmine issues as a ticketing system for customer sup
 To install the library, use `go get`:
 
 ```sh
-go get gitlab.com/etke.cc/go/redmine
+go get github.com/etkecc/go-redmine
 ```
 
 ## Usage
@@ -29,7 +29,7 @@ You need to configure the library to connect to your Redmine instance, here is a
 
 ```go
 import (
-    "gitlab.com/etke.cc/go/redmine"
+    "github/etkecc/go-redmine"
     "github.com/rs/zerolog"
     "os"
 )

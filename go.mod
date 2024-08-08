@@ -1,4 +1,4 @@
-module gitlab.com/etke.cc/go/redmine
+module github.com/etkecc/go-redmine
 
 go 1.21
 
